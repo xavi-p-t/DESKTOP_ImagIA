@@ -355,7 +355,7 @@ Future<void> uploadFolder(String localFolderPath, String remoteFolderPath) async
 
    // Método para registrar un usuario en el sistema
   Future<void> registerUser(String telefon, String nickname, String email, String password) async {
-    final url = Uri.parse('http://localhost:3000/api/usuaris/registrar');
+    final url = Uri.parse('https://imagia1.ieti.site/api/usuaris/registrar');
     
     // Crea el cuerpo de la solicitud como un mapa (map)
     final Map<String, String> requestBody = {

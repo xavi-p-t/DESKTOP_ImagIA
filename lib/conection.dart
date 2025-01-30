@@ -3,6 +3,8 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:dartssh2/dartssh2.dart';
 import 'package:archive/archive.dart';
+import 'package:http/http.dart' as http;
+
 
 class ServerConnectionManager {
   static final ServerConnectionManager _instance =
@@ -348,6 +350,44 @@ Future<void> uploadFolder(String localFolderPath, String remoteFolderPath) async
       print("Disconnected from the SSH server.");
     } else {
       print("No SSH client to disconnect.");
+    }
+  }
+
+   // Método para registrar un usuario en el sistema
+  Future<void> registerUser(String telefon, String nickname, String email, String password) async {
+    final url = Uri.parse('http://localhost:3000/api/usuaris/registrar');
+    
+    // Crea el cuerpo de la solicitud como un mapa (map)
+    final Map<String, String> requestBody = {
+      'telefon': telefon,
+      'nickname': nickname,
+      'email': email,
+      'password': password,
+    };
+
+    try {
+      // Enviar la solicitud POST con los parámetros necesarios
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: json.encode(requestBody),
+      );
+
+      // Manejo de la respuesta
+      if (response.statusCode == 200) {
+        // Si la respuesta es exitosa
+        final responseData = json.decode(response.body);
+        print('Usuario registrado con éxito: ${responseData['message']}');
+        // Puedes hacer algo con la respuesta si es necesario, como mostrar un mensaje en la interfaz
+      } else {
+        // Si la respuesta es un error
+        print('Error al registrar el usuario: ${response.body}');
+      }
+    } catch (e) {
+      // Manejar errores de conexión o cualquier otro error
+      print('Error al hacer la solicitud: $e');
     }
   }
 }

@@ -5,7 +5,6 @@ import 'package:dartssh2/dartssh2.dart';
 import 'package:archive/archive.dart';
 import 'package:http/http.dart' as http;
 
-
 class ServerConnectionManager {
   static final ServerConnectionManager _instance =
       ServerConnectionManager._internal();
@@ -135,57 +134,56 @@ class ServerConnectionManager {
     }
   }
 
+  Future<void> downloadFile(String remotePath, String localPath) async {
+    try {
+      // Conexión SFTP
+      final sftp = await _sshClient!.sftp();
 
-Future<void> downloadFile(String remotePath, String localPath) async {
-  try {
-    // Conexión SFTP
-    final sftp = await _sshClient!.sftp();
+      // Abrir archivo remoto para lectura
+      final remoteFile =
+          await sftp.open(remotePath, mode: SftpFileOpenMode.read);
 
-    // Abrir archivo remoto para lectura
-    final remoteFile = await sftp.open(remotePath, mode: SftpFileOpenMode.read);
+      // Crear archivo local para escritura
+      final localFile = File(localPath);
 
-    // Crear archivo local para escritura
-    final localFile = File(localPath);
+      // Abrir un Stream de escritura en el archivo local
+      final fileSink = localFile.openWrite();
 
-    // Abrir un Stream de escritura en el archivo local
-    final fileSink = localFile.openWrite();
+      // Leer el archivo remoto y escribir en el archivo local
+      await for (final chunk in remoteFile.read(
+        onProgress: (bytesRead) {
+          print('Progreso: $bytesRead bytes leídos');
+        },
+      )) {
+        fileSink.add(chunk);
+      }
 
-    // Leer el archivo remoto y escribir en el archivo local
-    await for (final chunk in remoteFile.read(
-      onProgress: (bytesRead) {
-        print('Progreso: $bytesRead bytes leídos');
-      },
-    )) {
-      fileSink.add(chunk);
+      // Cerrar el Sink y el archivo remoto
+      await fileSink.close();
+      await remoteFile.close();
+
+      print('Archivo descargado correctamente: $localPath');
+    } catch (e) {
+      print('Error durante la descarga del archivo: $e');
     }
-
-    // Cerrar el Sink y el archivo remoto
-    await fileSink.close();
-    await remoteFile.close();
-
-
-    print('Archivo descargado correctamente: $localPath');
-  } catch (e) {
-    print('Error durante la descarga del archivo: $e');
   }
-}
-
 
   Future<String> showFileInfo(String remotePath) async {
-  try {
-    // Usamos el comando 'ls -l' para obtener detalles del archivo o carpeta
-    final result = await executeCommand('ls -l $remotePath');
-    print("Información del archivo o carpeta: $result");
-    return result;
-  } catch (e) {
-    print("Error mostrando información del archivo o carpeta: $e");
-    throw Exception("Error mostrando información del archivo o carpeta: $e");
+    try {
+      // Usamos el comando 'ls -l' para obtener detalles del archivo o carpeta
+      final result = await executeCommand('ls -l $remotePath');
+      print("Información del archivo o carpeta: $result");
+      return result;
+    } catch (e) {
+      print("Error mostrando información del archivo o carpeta: $e");
+      throw Exception("Error mostrando información del archivo o carpeta: $e");
+    }
   }
-}
 
-Future<String> startServer(String serverPath, String serverType, int port) async {
-  try {
-    final command = '''
+  Future<String> startServer(
+      String serverPath, String serverType, int port) async {
+    try {
+      final command = '''
     cd $serverPath/server
 
     # Instalar dependencias para Node.js si es necesario
@@ -205,18 +203,17 @@ Future<String> startServer(String serverPath, String serverType, int port) async
     echo "Servidor $serverType iniciado con PID \$PID"
     ''';
 
-    final result = await executeCommand(command);
-    return  "Servidor $serverType iniciado en el puerto $port";;
-  } catch (e) {
-    return "Error iniciando el servidor: $e";
+      final result = await executeCommand(command);
+      return "Servidor $serverType iniciado en el puerto $port";
+      ;
+    } catch (e) {
+      return "Error iniciando el servidor: $e";
+    }
   }
-}
 
-
-
-Future<String> stopServer(String serverType ,int port) async {
-  try {
-    final command = '''
+  Future<String> stopServer(String serverType, int port) async {
+    try {
+      final command = '''
     # Buscar y detener el proceso en el puerto dado
     PID=\$(lsof -t -i :$port)
     if [ -n "\$PID" ]; then
@@ -227,117 +224,120 @@ Future<String> stopServer(String serverType ,int port) async {
     fi
     ''';
 
-    final result = await executeCommand(command);
-    return "Servidor $serverType detenido en el puerto $port";
-  } catch (e) {
-    return "Error deteniendo el servidor: $e";
-  }
-}
-
-
-Future<String> restartServer(String serverPath, String serverType, int port) async {
-  try {
-    // Detener el servidor
-    final stopResult = await stopServer(serverType ,port);
-
-    // Iniciar el servidor
-    final startResult = await startServer(serverPath, serverType, port);
-
-    return "Reinicio completado:\n$stopResult\n$startResult";
-  } catch (e) {
-    return "Error reiniciando el servidor: $e";
-  }
-}
-
-
-
-
-Future<void> uploadFile(String localPath, String remotePath) async {
-  if (_sshClient == null) {
-    throw Exception("SSH Client is not initialized. Call connect() first.");
+      final result = await executeCommand(command);
+      return "Servidor $serverType detenido en el puerto $port";
+    } catch (e) {
+      return "Error deteniendo el servidor: $e";
+    }
   }
 
-  try {
-    final sftp = await _sshClient!.sftp();
+  Future<String> restartServer(
+      String serverPath, String serverType, int port) async {
+    try {
+      // Detener el servidor
+      final stopResult = await stopServer(serverType, port);
 
-    final file = File(localPath);
+      // Iniciar el servidor
+      final startResult = await startServer(serverPath, serverType, port);
 
-    if (!file.existsSync()) {
-      throw Exception("No existeix l'arxiu local: $localPath");
+      return "Reinicio completado:\n$stopResult\n$startResult";
+    } catch (e) {
+      return "Error reiniciando el servidor: $e";
+    }
+  }
+
+  Future<void> uploadFile(String localPath, String remotePath) async {
+    if (_sshClient == null) {
+      throw Exception("SSH Client is not initialized. Call connect() first.");
     }
 
-    if (localPath.endsWith('.zip')) {
-      print("Descomprimint arxius...");
-      final bytes = file.readAsBytesSync();
-      final archive = ZipDecoder().decodeBytes(bytes);
-
-      final extractionDir = Directory('${file.parent.path}/${file.uri.pathSegments.last.replaceAll(".zip", "")}');
-      if (!extractionDir.existsSync()) {
-        extractionDir.createSync(recursive: true);
-      }
-
-      for (final archiveFile in archive) {
-        if (archiveFile.isFile) {
-          final data = archiveFile.content as List<int>;
-          final extractedFilePath = '${extractionDir.path}/${archiveFile.name}';
-          final extractedFile = File(extractedFilePath);
-          extractedFile.createSync(recursive: true);
-          extractedFile.writeAsBytesSync(data);
-        }
-      }
-
-      await uploadFolder(extractionDir.path, remotePath.replaceAll('.zip', ''));
-    } else {
-      final sanitizedRemotePath = remotePath.replaceAll(' ', '_');
-      final fileStream = file.openRead().map((chunk) => Uint8List.fromList(chunk));
-
-      final remoteFile = await sftp.open(
-        sanitizedRemotePath,
-        mode: SftpFileOpenMode.create | SftpFileOpenMode.write,
-      );
-
-      await remoteFile.write(fileStream);
-      await remoteFile.close();
-    }
-
-    sftp.close();
-    print("Proceso completat.");
-  } catch (e) {
-    print("Error al pujar el arxiu: $e");
-    throw Exception("Error al pujar el arxiu: $e");
-  }
-}
-
-Future<void> uploadFolder(String localFolderPath, String remoteFolderPath) async {
-  final localDirectory = Directory(localFolderPath);
-  if (!localDirectory.existsSync()) {
-    throw Exception("La carpeta local no existeix: $localFolderPath");
-  }
-
-  await executeCommand('mkdir -p $remoteFolderPath');
-
-  for (final entity in localDirectory.listSync(recursive: true)) {
-    final relativePath = entity.path.replaceFirst(localFolderPath, '');
-    final sanitizedRemotePath = '$remoteFolderPath/$relativePath'.replaceAll(' ', '_');
-
-    if (entity is File) {
-      final fileStream = entity.openRead().map((chunk) => Uint8List.fromList(chunk));
-
+    try {
       final sftp = await _sshClient!.sftp();
-      final remoteFile = await sftp.open(
-        sanitizedRemotePath,
-        mode: SftpFileOpenMode.create | SftpFileOpenMode.write,
-      );
 
-      await remoteFile.write(fileStream);
-      await remoteFile.close();
+      final file = File(localPath);
+
+      if (!file.existsSync()) {
+        throw Exception("No existeix l'arxiu local: $localPath");
+      }
+
+      if (localPath.endsWith('.zip')) {
+        print("Descomprimint arxius...");
+        final bytes = file.readAsBytesSync();
+        final archive = ZipDecoder().decodeBytes(bytes);
+
+        final extractionDir = Directory(
+            '${file.parent.path}/${file.uri.pathSegments.last.replaceAll(".zip", "")}');
+        if (!extractionDir.existsSync()) {
+          extractionDir.createSync(recursive: true);
+        }
+
+        for (final archiveFile in archive) {
+          if (archiveFile.isFile) {
+            final data = archiveFile.content as List<int>;
+            final extractedFilePath =
+                '${extractionDir.path}/${archiveFile.name}';
+            final extractedFile = File(extractedFilePath);
+            extractedFile.createSync(recursive: true);
+            extractedFile.writeAsBytesSync(data);
+          }
+        }
+
+        await uploadFolder(
+            extractionDir.path, remotePath.replaceAll('.zip', ''));
+      } else {
+        final sanitizedRemotePath = remotePath.replaceAll(' ', '_');
+        final fileStream =
+            file.openRead().map((chunk) => Uint8List.fromList(chunk));
+
+        final remoteFile = await sftp.open(
+          sanitizedRemotePath,
+          mode: SftpFileOpenMode.create | SftpFileOpenMode.write,
+        );
+
+        await remoteFile.write(fileStream);
+        await remoteFile.close();
+      }
+
       sftp.close();
-    } else if (entity is Directory) {
-      await executeCommand('mkdir -p $sanitizedRemotePath');
+      print("Proceso completat.");
+    } catch (e) {
+      print("Error al pujar el arxiu: $e");
+      throw Exception("Error al pujar el arxiu: $e");
     }
   }
-}
 
+  Future<void> uploadFolder(
+      String localFolderPath, String remoteFolderPath) async {
+    final localDirectory = Directory(localFolderPath);
+    if (!localDirectory.existsSync()) {
+      throw Exception("La carpeta local no existeix: $localFolderPath");
+    }
+
+    await executeCommand('mkdir -p $remoteFolderPath');
+
+    for (final entity in localDirectory.listSync(recursive: true)) {
+      final relativePath = entity.path.replaceFirst(localFolderPath, '');
+      final sanitizedRemotePath =
+          '$remoteFolderPath/$relativePath'.replaceAll(' ', '_');
+
+      if (entity is File) {
+        final fileStream =
+            entity.openRead().map((chunk) => Uint8List.fromList(chunk));
+
+        final sftp = await _sshClient!.sftp();
+        final remoteFile = await sftp.open(
+          sanitizedRemotePath,
+          mode: SftpFileOpenMode.create | SftpFileOpenMode.write,
+        );
+
+        await remoteFile.write(fileStream);
+        await remoteFile.close();
+        sftp.close();
+      } else if (entity is Directory) {
+        await executeCommand('mkdir -p $sanitizedRemotePath');
+      }
+    }
+  }
 
   /// Cerrar la conexión SSH.
   Future<void> disconnect() async {
@@ -353,10 +353,11 @@ Future<void> uploadFolder(String localFolderPath, String remoteFolderPath) async
     }
   }
 
-   // Método para registrar un usuario en el sistema
-  Future<void> registerUser(String telefon, String nickname, String email, String password) async {
+  // Método para registrar un usuario en el sistema
+  Future<void> registerUser(
+      String telefon, String nickname, String email, String password) async {
     final url = Uri.parse('https://imagia1.ieti.site/api/usuaris/registrar');
-    
+
     // Crea el cuerpo de la solicitud como un mapa (map)
     final Map<String, String> requestBody = {
       'telefon': telefon,
@@ -388,6 +389,83 @@ Future<void> uploadFolder(String localFolderPath, String remoteFolderPath) async
     } catch (e) {
       // Manejar errores de conexión o cualquier otro error
       print('Error al hacer la solicitud: $e');
+    }
+  }
+
+  // Método para loggear un usuario en el sistema
+  Future<String> loginUser(String nickname, String password) async {
+    final url = Uri.parse('https://imagia1.ieti.site/api/admin/usuaris/login');
+
+    // Crea el cuerpo de la solicitud como un mapa (map)
+    final Map<String, String> requestBody = {
+      'nickname': nickname,
+      'password': password,
+    };
+
+    try {
+      // Enviar la solicitud POST con los parámetros necesarios
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: json.encode(requestBody),
+      );
+
+      // Manejo de la respuesta
+      if (response.statusCode == 200) {
+        // Si la respuesta es exitosa
+        final responseData = json.decode(response.body);
+        print('Usuario loggeado con éxito: ${responseData['message']}');
+        return responseData['token'];
+
+      } else {
+        // Si la respuesta es un error
+        print('Error al hacer log in con este usuario: ${response.body}');
+        return '';
+      }
+    } catch (e) {
+      // Manejar errores de conexión o cualquier otro error
+      print('Error al hacer la solicitud: $e');
+      return '';
+    }
+  }
+
+  // Método para loggear un usuario en el sistema
+  Future<bool> checkToken(String token) async {
+    final url = Uri.parse(
+        'https://imagia1.ieti.site/api/admin/usuaris/verificar-token');
+
+    // Crea el cuerpo de la solicitud como un mapa (map)
+    final Map<String, String> requestBody = {
+      'token': token,
+    };
+
+    try {
+      // Enviar la solicitud POST con los parámetros necesarios
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: json.encode(requestBody),
+      );
+
+      // Manejo de la respuesta
+      if (response.statusCode == 200) {
+        // Si la respuesta es exitosa
+        final responseData = json.decode(response.body);
+        print('Token vaido: ${responseData['message']}');
+        return true;
+      } else {
+        // Si la respuesta es un error
+        print('Token invalido: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      // Manejar errores de conexión o cualquier otro error
+      print('Error al hacer la solicitud: $e');
+      return false;
     }
   }
 }

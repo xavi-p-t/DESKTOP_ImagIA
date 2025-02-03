@@ -36,12 +36,13 @@ class _ServerConnectionPageState extends State<ServerConnectionPage> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _serverController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  String _token = '';
   final String _fileName = 'server.json';
 
   @override
   void initState() {
     super.initState();
-    _loadServer();
+    _loadServerAndToken();
   }
 
   Future<String> _getFilePath() async {
@@ -53,18 +54,14 @@ class _ServerConnectionPageState extends State<ServerConnectionPage> {
     try {
       final filePath = await _getFilePath();
       final file = File(filePath);
-      final serverData = {
-        'username': _usernameController.text,
-        'server': _serverController.text,
-        'password': _passwordController.text,
-      };
+      final serverData = {'server': _serverController.text, 'token': _token};
       await file.writeAsString(json.encode(serverData));
     } catch (e) {
       print("Error saving server: $e");
     }
   }
 
-  Future<void> _loadServer() async {
+  Future<void> _loadServerAndToken() async {
     try {
       final filePath = await _getFilePath();
       final file = File(filePath);
@@ -73,10 +70,13 @@ class _ServerConnectionPageState extends State<ServerConnectionPage> {
         final serverJson = await file.readAsString();
         final serverData = json.decode(serverJson);
         setState(() {
-          _usernameController.text = serverData['username'] ?? '';
           _serverController.text = serverData['server'] ?? '';
-          _passwordController.text = serverData['password'] ?? '';
+          _token = serverData['token'] ?? '';
         });
+      }
+
+      if (_token.isNotEmpty && _token != '') {
+        _connect(_token);
       }
     } catch (e) {
       print("Error loading server: $e");
@@ -91,43 +91,59 @@ class _ServerConnectionPageState extends State<ServerConnectionPage> {
         await file.delete();
       }
       setState(() {
-        _usernameController.clear();
         _serverController.clear();
-        _passwordController.clear();
       });
     } catch (e) {
       print("Error deleting server: $e");
     }
   }
 
-  void _connect() {
-    if (_usernameController.text.isEmpty ||
-        _serverController.text.isEmpty ||
-        _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all the fields')),
-      );
-      return;
+  void _connect(String token) async {
+    final connectionManager = ServerConnectionManager();
+
+    var responseToken = false;
+    var responseLogin = '';
+    if (token.isNotEmpty || token != '') {
+      responseToken = await connectionManager.checkToken(token);
+    } else {
+      print("No tengo token");
+      if (_usernameController.text.isEmpty ||
+          _serverController.text.isEmpty ||
+          _passwordController.text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please fill in all the fields')),
+        );
+        return;
+      }
+      responseLogin = await connectionManager.loginUser(
+          _usernameController.text, _passwordController.text);
+
+      if (responseLogin.isNotEmpty) {
+          print("Guardo nuevo token");
+        _token = responseLogin;
+        _saveServer();
+      }
+      connectionManager.loginUser(
+          _usernameController.text, _passwordController.text);
     }
 
-    final connectionManager = ServerConnectionManager();
-    connectionManager.registerUser(
-        '000000000', _usernameController.text, 'test@test.com', _passwordController.text);
-
-    try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Connected to ${_serverController.text}!')),
-      );
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ViewTest(connectionManager: connectionManager),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to connect. Error: $e')),
-      );
+    if (responseToken || responseLogin != '') {
+      try {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Connected to ${_serverController.text}!')),
+        );
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                ViewTest(connectionManager: connectionManager),
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to connect. Error: $e')),
+        );
+      }
     }
   }
 
@@ -141,17 +157,17 @@ class _ServerConnectionPageState extends State<ServerConnectionPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             TextField(
-              controller: _usernameController,
+              controller: _serverController,
               decoration: const InputDecoration(
-                labelText: 'Username',
+                labelText: 'Server URL',
                 border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
             TextField(
-              controller: _serverController,
+              controller: _usernameController,
               decoration: const InputDecoration(
-                labelText: 'Server URL',
+                labelText: 'Username',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -174,7 +190,7 @@ class _ServerConnectionPageState extends State<ServerConnectionPage> {
                   label: const Text('Delete'),
                 ),
                 ElevatedButton.icon(
-                  onPressed: _connect,
+                  onPressed: () => _connect(_token),
                   icon: const Icon(Icons.link),
                   label: const Text('Connect'),
                 ),

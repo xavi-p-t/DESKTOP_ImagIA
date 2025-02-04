@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
-import '../conection.dart';
+import '../connection.dart';
 
 class ViewTest extends StatefulWidget {
   final ServerConnectionManager connectionManager;

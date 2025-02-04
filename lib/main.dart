@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:custom_widget/connection.dart';
-import 'package:custom_widget/viewTest.dart'; // Importa correctamente tu clase ViewTest.
+import 'package:custom_widget/viewTest.dart';
 
 void main() {
   runApp(const MyApp());
@@ -18,8 +18,8 @@ class MyApp extends StatelessWidget {
       title: 'Server Connection',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
+        primarySwatch: Colors.green,
+        scaffoldBackgroundColor: Colors.white,
       ),
       home: const ServerConnectionPage(),
     );
@@ -45,12 +45,32 @@ class _ServerConnectionPageState extends State<ServerConnectionPage> {
   @override
   void initState() {
     super.initState();
-    _checkInitialToken(); // Revisar token al iniciar la app.
+    _checkInitialToken();
+    _loadSavedServer();
   }
 
   Future<String> _getFilePath() async {
     final directory = Directory.current.path;
-    return p.join(directory, _fileName); // Utiliza path para manejar rutas correctamente.
+    return p.join(directory, _fileName);
+  }
+
+  Future<void> _loadSavedServer() async {
+    try {
+      final filePath = await _getFilePath();
+      final file = File(filePath);
+      if (await file.exists()) {
+        final serverJson = await file.readAsString();
+        final serverData = json.decode(serverJson);
+        final String savedServer = serverData['server'] ?? '';
+        if (savedServer.isNotEmpty) {
+          setState(() {
+            _serverController.text = savedServer;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error al cargar el servidor guardado: $e');
+    }
   }
 
   Future<void> _checkInitialToken() async {
@@ -64,26 +84,14 @@ class _ServerConnectionPageState extends State<ServerConnectionPage> {
         final String token = serverData['token'] ?? '';
 
         if (token.isNotEmpty) {
-          // Validar token con el servidor
           final isValidToken = await _connectionManager.checkToken(token);
 
           if (isValidToken) {
-            // Token válido, navegar a ViewTest
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ViewTest(connectionManager: _connectionManager),
-              ),
-            );
-            return; // Finaliza el flujo aquí.
-          } else {
-            print('Token inválido. Se requiere inicio de sesión.');
+            _showNotification('Inicio de sesión exitoso', Colors.green);
+            _navigateToViewTest();
+            return;
           }
-        } else {
-          print('No se encontró un token en el archivo.');
         }
-      } else {
-        print('Archivo server.json no existe.');
       }
     } catch (e) {
       print('Error al verificar el token: $e');
@@ -96,7 +104,6 @@ class _ServerConnectionPageState extends State<ServerConnectionPage> {
       final file = File(filePath);
       final serverData = {'server': _serverController.text, 'token': _token};
       await file.writeAsString(json.encode(serverData));
-      print('Server y token guardados correctamente.');
     } catch (e) {
       print("Error guardando el servidor: $e");
     }
@@ -113,12 +120,14 @@ class _ServerConnectionPageState extends State<ServerConnectionPage> {
           _token = token;
         });
         await _saveServer();
-        print('Inicio de sesión exitoso y token guardado.');
-        _navigateToViewTest(); // Navegar a ViewTest tras login exitoso.
-      } else {
-        print('Inicio de sesión fallido.');
+        _showNotification('Inicio de sesión exitoso', Colors.green);
+        _navigateToViewTest();
+      }
+      else {
+        _showNotification('Usuario o contraseña incorrectos.', Colors.red);
       }
     } catch (e) {
+      _showNotification('Error en el inicio de sesión', Colors.red);
       print('Error durante el inicio de sesión: $e');
     }
   }
@@ -132,6 +141,18 @@ class _ServerConnectionPageState extends State<ServerConnectionPage> {
     );
   }
 
+  void _showNotification(String message, Color color) {
+    final snackBar = SnackBar(
+      content: Text(
+        message,
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      ),
+      backgroundColor: color,
+      duration: const Duration(seconds: 3),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
+
   Future<void> _logout() async {
     try {
       final filePath = await _getFilePath();
@@ -143,7 +164,6 @@ class _ServerConnectionPageState extends State<ServerConnectionPage> {
         _serverController.clear();
         _token = '';
       });
-      print('Sesión cerrada y configuración eliminada.');
     } catch (e) {
       print("Error al cerrar sesión: $e");
     }
@@ -152,39 +172,105 @@ class _ServerConnectionPageState extends State<ServerConnectionPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Server Connection'),
-        actions: [
-          IconButton(
-            onPressed: _logout,
-            icon: const Icon(Icons.logout),
-          )
+      body: Stack(
+        children: [
+          // Fondo verde claro
+          Container(
+            color: Colors.green.withOpacity(0.1),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Panel verde del título
+              Container(
+                height: 250, // Altura de la franja verde
+                color: Colors.green,
+                alignment: Alignment.center,
+                child: const Text(
+                  'Login',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              // Margen superior después de la franja verde
+              const SizedBox(height: 24),
+              // Formulario
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextField(
+                        controller: _serverController,
+                        decoration: const InputDecoration(
+                          prefixIcon: Icon(Icons.cloud),
+                          labelText: 'Server Address',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _usernameController,
+                        decoration: const InputDecoration(
+                          prefixIcon: Icon(Icons.person),
+                          labelText: 'Username or Email',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _passwordController,
+                        decoration: const InputDecoration(
+                          prefixIcon: Icon(Icons.lock),
+                          labelText: 'Password',
+                          border: OutlineInputBorder(),
+                        ),
+                        obscureText: true,
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _loginAndSaveToken,
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            backgroundColor: Colors.green,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            'Log In',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _usernameController,
-              decoration: const InputDecoration(labelText: 'Username'),
-            ),
-            TextField(
-              controller: _serverController,
-              decoration: const InputDecoration(labelText: 'Server Address'),
-            ),
-            TextField(
-              controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'Password'),
-              obscureText: true,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _loginAndSaveToken,
-              child: const Text('Login'),
-            ),
-          ],
-        ),
       ),
     );
   }

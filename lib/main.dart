@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:custom_widget/connection.dart';
-import 'package:custom_widget/viewTest.dart';
+import 'package:custom_widget/viewAdmin.dart';
 
 void main() {
   runApp(const MyApp());
@@ -88,7 +88,7 @@ class _ServerConnectionPageState extends State<ServerConnectionPage> {
 
           if (isValidToken) {
             _showNotification('Inicio de sesión exitoso', Colors.green);
-            _navigateToViewTest();
+            _navigateToViewAdmin();
             return;
           }
         }
@@ -121,7 +121,7 @@ class _ServerConnectionPageState extends State<ServerConnectionPage> {
         });
         await _saveServer();
         _showNotification('Inicio de sesión exitoso', Colors.green);
-        _navigateToViewTest();
+        _navigateToViewAdmin();
       }
       else {
         _showNotification('Usuario o contraseña incorrectos.', Colors.red);
@@ -132,11 +132,11 @@ class _ServerConnectionPageState extends State<ServerConnectionPage> {
     }
   }
 
-  Future<void> _navigateToViewTest() async {
+  Future<void> _navigateToViewAdmin() async {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => ViewTest(connectionManager: _connectionManager),
+        builder: (context) => ViewAdmin(connectionManager: _connectionManager),
       ),
     );
   }

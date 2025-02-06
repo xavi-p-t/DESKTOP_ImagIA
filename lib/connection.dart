@@ -78,7 +78,7 @@ class ServerConnectionManager {
   // Método para registrar un usuario en el sistema
   Future<void> registerUser(
       String telefon, String nickname, String email, String password) async {
-    final url = Uri.parse('https://imagia1.ieti.site/api/usuaris/registrar');
+    final url = Uri.parse('http://localhost:3000/api/usuaris/registrar');
 
     // Crea el cuerpo de la solicitud como un mapa (map)
     final Map<String, String> requestBody = {
@@ -116,7 +116,7 @@ class ServerConnectionManager {
 
   // Método para loggear un usuario en el sistema
   Future<String> loginUser(String nickname, String password) async {
-    final url = Uri.parse('https://imagia1.ieti.site/api/admin/usuaris/login');
+    final url = Uri.parse('http://localhost:3000/api/admin/usuaris/login');
 
     // Crea el cuerpo de la solicitud como un mapa (map)
     final Map<String, String> requestBody = {
@@ -156,7 +156,7 @@ class ServerConnectionManager {
   // Método para loggear un usuario en el sistema
   Future<bool> checkToken(String token) async {
     final url = Uri.parse(
-        'https://imagia1.ieti.site/api/admin/usuaris/verificar-token');
+        'http://localhost:3000/api/admin/usuaris/verificar-token');
 
     // Crea el cuerpo de la solicitud como un mapa (map)
     final Map<String, String> requestBody = {
@@ -190,4 +190,29 @@ class ServerConnectionManager {
       return false;
     }
   }
+
+  Future<String> listAdminUsers() async {
+  final url = Uri.parse('http://localhost:3000/api/admin/usuaris');
+
+  try {
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      // Devuelve la respuesta completa como String (no conviertas a .toString())
+      return response.body;
+    } else {
+      print('Error al obtener los usuarios: ${response.body}');
+      return '';
+    }
+  } catch (e) {
+    print('Error al hacer la solicitud: $e');
+    return '';
+  }
+}
+
 }

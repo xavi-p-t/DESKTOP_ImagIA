@@ -60,7 +60,6 @@ class ServerConnectionManager {
     }
   }
 
- 
   /// Cerrar la conexión SSH.
   Future<void> disconnect() async {
     if (_sshClient != null) {
@@ -140,7 +139,6 @@ class ServerConnectionManager {
         final responseData = json.decode(response.body);
         print('Usuario loggeado con éxito: ${responseData['message']}');
         return responseData['api_token'];
-
       } else {
         // Si la respuesta es un error
         print('Error al hacer log in con este usuario: ${response.body}');
@@ -155,8 +153,8 @@ class ServerConnectionManager {
 
   // Método para loggear un usuario en el sistema
   Future<bool> checkToken(String token) async {
-    final url = Uri.parse(
-        'http://localhost:3000/api/admin/usuaris/verificar-token');
+    final url =
+        Uri.parse('http://localhost:3000/api/admin/usuaris/verificar-token');
 
     // Crea el cuerpo de la solicitud como un mapa (map)
     final Map<String, String> requestBody = {
@@ -191,35 +189,37 @@ class ServerConnectionManager {
     }
   }
 
-  Future<String> listAdminUsers() async {
-  final url = Uri.parse('http://localhost:3000/api/admin/usuaris');
+  Future<String> listAdminUsers(String token) async {
+    final url = Uri.parse('http://localhost:3000/api/admin/usuaris');
 
-  try {
-    final response = await http.get(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    );
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token', // Agrega el token a los encabezados
+        },
+      );
 
-    if (response.statusCode == 200) {
-      // Devuelve la respuesta completa como String (no conviertas a .toString())
-      return response.body;
-    } else {
-      print('Error al obtener los usuarios: ${response.body}');
+      if (response.statusCode == 200) {
+        // Devuelve la respuesta completa como String (no conviertas a .toString())
+        return response.body;
+      } else {
+        print('Error al obtener los usuarios: ${response.body}');
+        return '';
+      }
+    } catch (e) {
+      print('Error al hacer la solicitud: $e');
       return '';
     }
-  } catch (e) {
-    print('Error al hacer la solicitud: $e');
-    return '';
   }
-}
 
- // Método para actualizar el plan de un usuario
-  Future<bool> updateUserPlan(String nickname, String plan, String token) async {
+  // Método para actualizar el plan de un usuario
+  Future<bool> updateUserPlan(
+      String nickname, String plan, String token) async {
     print(token);
-    final url = Uri.parse(
-        'http://localhost:3000/api/admin/usuaris/pla/actualitzar');
+    final url =
+        Uri.parse('http://localhost:3000/api/admin/usuaris/pla/actualitzar');
 
     // Crear el cuerpo de la solicitud con los parámetros necesarios
     final Map<String, dynamic> requestBody = {
@@ -252,5 +252,4 @@ class ServerConnectionManager {
       return false;
     }
   }
-
 }

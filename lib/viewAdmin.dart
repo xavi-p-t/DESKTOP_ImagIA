@@ -20,10 +20,11 @@ class _ViewAdminState extends State<ViewAdmin>
   late Animation<double> _fadeAnimation;
   List<Map<String, dynamic>> _users = [];
   bool _isLoading = true;
+  late String token;
 
   @override
   void initState() {
-    super.initState();
+    token = widget.token;
 
     _controller = AnimationController(
       vsync: this,
@@ -32,7 +33,7 @@ class _ViewAdminState extends State<ViewAdmin>
     _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
 
     _controller.forward();
-    _listUsers();
+    _listUsers(token);
   }
 
   @override
@@ -41,9 +42,9 @@ class _ViewAdminState extends State<ViewAdmin>
     super.dispose();
   }
 
-  Future<void> _listUsers() async {
+  Future<void> _listUsers(String token) async {
     try {
-      final response = await widget.connectionManager.listAdminUsers();
+      final response = await widget.connectionManager.listAdminUsers(token);
       final decodedResponse = json.decode(response) as Map<String, dynamic>;
 
       setState(() {

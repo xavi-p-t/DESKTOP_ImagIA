@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import '../connection.dart';
 
 class ViewAdmin extends StatefulWidget {
+  final token;
   final ServerConnectionManager connectionManager;
 
-  const ViewAdmin({super.key, required this.connectionManager});
+
+  const ViewAdmin({super.key, required this.connectionManager, required this.token});
 
   @override
   _ViewAdminState createState() => _ViewAdminState();
@@ -16,49 +18,91 @@ class _ViewAdminState extends State<ViewAdmin>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-  List<Map<String, dynamic>> _users = []; // Lista para almacenar los usuarios
-  bool _isLoading =
-      true; // Para mostrar un indicador de carga mientras se obtienen los usuarios
+  List<Map<String, dynamic>> _users = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
 
-    // Configurar el controlador y animación de fade
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 1), // Duración de la animación
+      duration: const Duration(seconds: 1),
     );
     _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
 
-    _controller.forward(); // Iniciar la animación
-    _listUsers(); // Cargar usuarios al iniciar la vista
+    _controller.forward();
+    _listUsers();
   }
 
   @override
   void dispose() {
-    _controller.dispose(); // Liberar recursos del controlador
+    _controller.dispose();
     super.dispose();
   }
 
   Future<void> _listUsers() async {
     try {
       final response = await widget.connectionManager.listAdminUsers();
-
-      // Decodifica la respuesta como un Map
       final decodedResponse = json.decode(response) as Map<String, dynamic>;
 
       setState(() {
-        // Extrae la lista de usuarios dentro de la clave "usuaris"
         _users = (decodedResponse['usuaris'] as List<dynamic>)
-            .cast<Map<String, dynamic>>(); // Asegurarse de que es una lista
-        _isLoading = false; // Indicar que se ha terminado de cargar
+            .cast<Map<String, dynamic>>();
+        _isLoading = false;
       });
     } catch (e) {
       setState(() {
-        _isLoading = false; // Detener la carga incluso si ocurre un error
+        _isLoading = false;
       });
       print('Error al obtener los usuarios: $e');
+    }
+  }
+
+  Future<void> _updateUserPlan(String nickname, String newPlan, String token) async {
+    try {
+      // Llama al método updateUserPlan desde connectionManager
+      final success = await widget.connectionManager.updateUserPlan(
+        nickname,
+        newPlan,
+        token
+      );
+
+      // Muestra mensajes en la UI según el resultado
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Plan actualizado para $nickname a $newPlan.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Actualizar la lista localmente si es necesario
+        setState(() {
+          final userIndex =
+              _users.indexWhere((user) => user['nickname'] == nickname);
+          if (userIndex != -1) {
+            _users[userIndex]['pla'] =
+                newPlan; // Actualizar el plan en la lista local
+          }
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al actualizar el plan de $nickname.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      // Manejo de errores en caso de fallo de conexión u otro problema
+      print('Error al actualizar el plan: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error de conexión al intentar actualizar el plan.'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -73,13 +117,13 @@ class _ViewAdminState extends State<ViewAdmin>
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Cerrar el diálogo
+                Navigator.of(context).pop();
               },
               child: const Text("Cancelar"),
             ),
             TextButton(
               onPressed: () {
-                exit(0); // Cerrar la aplicación
+                exit(0);
               },
               child: const Text("Salir"),
             ),
@@ -94,22 +138,19 @@ class _ViewAdminState extends State<ViewAdmin>
     return WillPopScope(
       onWillPop: () async {
         _showExitConfirmation(context);
-        return false; // Evitar el cierre automático
+        return false;
       },
       child: Scaffold(
         body: Stack(
           children: [
-            // Fondo verde claro
             Container(
               color: Colors.green.withOpacity(0.1),
             ),
-            // Contenido principal con animación
             FadeTransition(
               opacity: _fadeAnimation,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Franja verde superior con el título
                   Container(
                     height: 250,
                     color: Colors.green,
@@ -124,7 +165,6 @@ class _ViewAdminState extends State<ViewAdmin>
                     ),
                   ),
                   const SizedBox(height: 24),
-                  // Panel principal con la lista de usuarios
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 32.0),
@@ -142,8 +182,7 @@ class _ViewAdminState extends State<ViewAdmin>
                           ],
                         ),
                         child: _isLoading
-                            ? const Center(
-                                child: CircularProgressIndicator()) // Indicador de carga
+                            ? const Center(child: CircularProgressIndicator())
                             : _users.isEmpty
                                 ? const Center(
                                     child: Text(
@@ -151,30 +190,53 @@ class _ViewAdminState extends State<ViewAdmin>
                                       style: TextStyle(fontSize: 18),
                                     ),
                                   )
-                                : SingleChildScrollView( // Agregado el scroll
-                                    child: Column( // Mostrar la lista de usuarios verticalmente
-                                      children: _users
-                                          .map((user) => Padding(
-                                                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                                                child: Align(  // Alinear a la izquierda
-                                                  alignment: Alignment.centerLeft,
-                                                  child: Container(
-                                                    width: double.infinity,  // Ocupa todo el ancho
-                                                    child: Chip(
-                                                      label: Text(
-                                                        user['nickname'], // Mostramos el nickname
-                                                        style: const TextStyle(
-                                                          fontSize: 18, // Aumentar el tamaño de la fuente
-                                                          fontWeight: FontWeight.bold, // Hacerla más prominente
-                                                        ),
-                                                      ),
-                                                      backgroundColor: Colors.green.withOpacity(0.2),
-                                                    ),
-                                                  ),
+                                : ListView.builder(
+                                    itemCount: _users.length,
+                                    itemBuilder: (context, index) {
+                                      final user = _users[index];
+                                      return Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 8.0),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              user['nickname'],
+                                              style: const TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            DropdownButton<String>(
+                                              value: user['pla'], // Plan actual
+                                              items: const [
+                                                DropdownMenuItem(
+                                                  value: 'free',
+                                                  child: Text('Free'),
                                                 ),
-                                              ))
-                                          .toList(),
-                                    ),
+                                                DropdownMenuItem(
+                                                  value: 'premium',
+                                                  child: Text('Premium'),
+                                                ),
+                                              ],
+                                              onChanged: (newPlan) {
+                                                if (newPlan != null) {
+                                                  setState(() {
+                                                    user['pla'] = newPlan;
+                                                  });
+                                                  _updateUserPlan(
+                                                    user['nickname'],
+                                                    newPlan,
+                                                    widget.token
+                                                  );
+                                                }
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
                                   ),
                       ),
                     ),

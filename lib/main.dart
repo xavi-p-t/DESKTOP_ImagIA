@@ -88,7 +88,7 @@ class _ServerConnectionPageState extends State<ServerConnectionPage> {
 
           if (isValidToken) {
             _showNotification('Inicio de sesión exitoso', Colors.green);
-            _navigateToViewAdmin();
+            _navigateToViewAdmin(token);
             return;
           }
         }
@@ -121,7 +121,7 @@ class _ServerConnectionPageState extends State<ServerConnectionPage> {
         });
         await _saveServer();
         _showNotification('Inicio de sesión exitoso', Colors.green);
-        _navigateToViewAdmin();
+        _navigateToViewAdmin(token);
       }
       else {
         _showNotification('Usuario o contraseña incorrectos.', Colors.red);
@@ -132,11 +132,11 @@ class _ServerConnectionPageState extends State<ServerConnectionPage> {
     }
   }
 
-  Future<void> _navigateToViewAdmin() async {
+  Future<void> _navigateToViewAdmin(String token) async {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => ViewAdmin(connectionManager: _connectionManager),
+        builder: (context) => ViewAdmin(connectionManager: _connectionManager, token: token),
       ),
     );
   }

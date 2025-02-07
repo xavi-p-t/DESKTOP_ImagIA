@@ -215,4 +215,42 @@ class ServerConnectionManager {
   }
 }
 
+ // Método para actualizar el plan de un usuario
+  Future<bool> updateUserPlan(String nickname, String plan, String token) async {
+    print(token);
+    final url = Uri.parse(
+        'http://localhost:3000/api/admin/usuaris/pla/actualitzar');
+
+    // Crear el cuerpo de la solicitud con los parámetros necesarios
+    final Map<String, dynamic> requestBody = {
+      'nickname': nickname,
+      'pla': plan,
+    };
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token', // Agrega el token a los encabezados
+        },
+        body: json.encode(requestBody),
+      );
+
+      if (response.statusCode == 200) {
+        // La actualización fue exitosa
+        final responseData = json.decode(response.body);
+        print('Plan actualizado: ${responseData['message']}');
+        return true;
+      } else {
+        // Hubo un error en la actualización
+        print('Error al actualizar el plan: ${response.body}, ${token}');
+        return false;
+      }
+    } catch (e) {
+      print('Error al hacer la solicitud: $e');
+      return false;
+    }
+  }
+
 }

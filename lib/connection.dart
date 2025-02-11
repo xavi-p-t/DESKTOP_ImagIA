@@ -77,7 +77,7 @@ class ServerConnectionManager {
   // Método para registrar un usuario en el sistema
   Future<void> registerUser(
       String telefon, String nickname, String email, String password) async {
-    final url = Uri.parse('http://localhost:3000/api/usuaris/registrar');
+    final url = Uri.parse('https://imagia1.ieti.site/api/usuaris/registrar');
 
     // Crea el cuerpo de la solicitud como un mapa (map)
     final Map<String, String> requestBody = {
@@ -115,7 +115,7 @@ class ServerConnectionManager {
 
   // Método para loggear un usuario en el sistema
   Future<String> loginUser(String nickname, String password) async {
-    final url = Uri.parse('http://localhost:3000/api/admin/usuaris/login');
+    final url = Uri.parse('https://imagia1.ieti.site/api/admin/usuaris/login');
 
     // Crea el cuerpo de la solicitud como un mapa (map)
     final Map<String, String> requestBody = {
@@ -138,7 +138,7 @@ class ServerConnectionManager {
         // Si la respuesta es exitosa
         final responseData = json.decode(response.body);
         print('Usuario loggeado con éxito: ${responseData['message']}');
-        return responseData['api_token'];
+        return responseData['admin_token'];
       } else {
         // Si la respuesta es un error
         print('Error al hacer log in con este usuario: ${response.body}');
@@ -154,7 +154,7 @@ class ServerConnectionManager {
   // Método para loggear un usuario en el sistema
   Future<bool> checkToken(String token) async {
     final url =
-        Uri.parse('http://localhost:3000/api/admin/usuaris/verificar-token');
+        Uri.parse('https://imagia1.ieti.site/api/admin/usuaris/verificar-token');
 
     // Crea el cuerpo de la solicitud como un mapa (map)
     final Map<String, String> requestBody = {
@@ -190,7 +190,7 @@ class ServerConnectionManager {
   }
 
   Future<String> listAdminUsers(String token) async {
-    final url = Uri.parse('http://localhost:3000/api/admin/usuaris');
+    final url = Uri.parse('https://imagia1.ieti.site/api/admin/usuaris');
 
     try {
       final response = await http.get(
@@ -219,7 +219,7 @@ class ServerConnectionManager {
       String nickname, String plan, String token) async {
     print(token);
     final url =
-        Uri.parse('http://localhost:3000/api/admin/usuaris/pla/actualitzar');
+        Uri.parse('https://imagia1.ieti.site/api/admin/usuaris/pla/actualitzar');
 
     // Crear el cuerpo de la solicitud con los parámetros necesarios
     final Map<String, dynamic> requestBody = {
